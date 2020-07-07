@@ -1,4 +1,4 @@
-#include("C:/Users/slephc/Desktop/Julia 1.4.2/repo.jl")
+#include("C:/Users/slephc/Desktop/Julia 1.4.2/Steph_Repository.jl")
 module repo
 
 using Pkg
@@ -34,14 +34,13 @@ end
 	#C will equal in the input
 	C::Int						#number of classes
 	#all other values initialized to 0/default
-	N::Int = 0					#current max number of items
+	N::Int = 10					#current max number of items
 	nStored::Int = 0			#total number of items stored
-	count::Array{Int} = [1]		#number of items per class;
-	offset::Array{Int} = [1]	#start index of a class
-	items::Array{Any} =[1]		#array of item pointers
-	nums::Array{Int} = [1]		#number of an item according to id
-	ids::Array{Int} = [1]		#id of an item according to number
-
+	count = fill(0, (C+1))		#number of items per class;
+	offset = fill(1, C+2)		#start index of a class
+	items = Array{Any}(undef, N)		#array of item objects
+	nums = Array{Int}(undef, N)		#number of an item according to id
+	ids = Array{Int}(undef, N)		#id of an item according to number
 end
 
 
@@ -52,43 +51,51 @@ end
 	#N will equal input
 	N::Int
 	#all other values init to 0 or default
-	nStored::Int = 0
-	count::Array{Int} = [1]
-	offset::Array{Int} = [1]
-	items::Array{Any} =[1]
-	nums::Array{Int} = [1]
-	ids::Array{Int} = [1]
+	nStored::Int = 0			#total number of items stored
+	count = fill(0, (C+1))	#number of items per class;
+	offset = fill(1, (C+2))	#start index of a class
+	items = Array{Any}(undef, N)		#array of item objects
+	nums = Array{Int}(undef, N)		#number of an item according to id
+	ids = Array{Int}(undef, N)		#id of an item according to number
+end
 
+
+#/////////// ALLOCATE MEMORY /////////////////////////////
+#void CRepository<T>::Allocate()
+function Allocate(object::CRepository)
+	object.count[object.C+1] = object.N
+	for i = 1:object.N
+		object.nums[i] = i
+		object.ids[i] = i
+	end
+	return object
 end
 
 
 #/////////////////////////// A D D I N G    I T E M S///////////////////
 
-function Add(object::CRepository, pItem) where T #add item to class 1
+function Add(object::CRepository, pItem::T) where T #add item to class 1
 	return Add(object, pItem, 1)
 end
 
 function Add(object::CRepository, pItem::T, nClass::Int) where T
 	@assert nClass <= object.C		#basic storage at the end
 	@assert nClass >= 1
-	curnum::Int = object.offset[object.C]
-	if curnum>=object.N
-		if Enlarge(object) == false
+	curnum::Int = object.offset[object.C+1] #Get the start index of class C
+	if curnum>=object.N #check if the amount of classes currently is >= max number of items
+		if Enlarge(object) == false #if you can't enlarge anymore bc exceeds max number of items
 			error("Repository Error")
 		#DO THIS LATER
 		end
 	end
 	#REP_UID uid=ids[curnum];
-	uid::Int = object.ids[curnum]
+	uid::Int = object.ids[curnum] #uid = id of the last number
 	#items[uid]=pItem;				// Store Item
-	object.items[uid] = pItem
-	#ClassDecrease(curnum,nClass);   // Move into right class
-	#println("curnum ", curnum, " nClass ", nClass)
-	ClassDecrease(object, curnum, nClass)
+	object.items[uid] = pItem #set the last Item = newItem
+	#ClassDecrease(curnum,nClass);   // Move into right class	ClassDecrease(object, curnum, nClass)
 	#nStored++;
 	object.nStored += 1
 	#return uid;
-	println(object.offset)
 	return uid
 end
 
@@ -98,7 +105,7 @@ function IDAdr(object::CRepository, adr::Int) #///ID of an address
 end
 
 function ID(object::CRepository, cls::Int, adr::Int)
-	return object.ids[object.offset[cls]+adr-1]
+	return object.ids[object.offset[cls]+adr]
 end
 
 #///////////////// N U M B E R  O F  I T E M S ///////////////////////////////////
@@ -109,7 +116,7 @@ end
 #REP_ADDRESS CRepository<T>::NumberOfItems(const REP_CLASS nClass) const//////////////////////
 function NumberOfItemsClass(object::CRepository, nClass::Int) # /// NUMBER OF ITEMS OF CLASS ///////////////
 	@assert(nClass>=1)
-	@assert(nClass<object.C)
+	@assert(nClass<=object.C)
 	return object.count[nClass]#REP_ADDRESS
 end
 
@@ -117,29 +124,29 @@ end
 
 function RemoveNum(object::CRepository,nNum::Int)
 	@assert(nNum>=1)
-	@assert(nNum<1)
-	pItem::Ptr{T} = object.items[object.ids[nNum]]
-	object.items[object.ids[nNum]] = 1
-	ClassIncrease(nNum,object.C)
+	@assert(nNum<=object.N)
+	pItem = object.items[object.ids[nNum]]
+	object.items[object.ids[nNum]] = 0
+	ClassIncrease(object, nNum, object.C)
 	object.nStored -= 1
 	return pItem #REP_ADDRESS
 end
 
 function RemoveID(object::CRepository,idItem::Int) #// REMOVE AN ITEM ////////////////
-	@assert(idItem >=1 && idItem<N)
-	return Remove(object.num[idItem]) #REP_UID
+	@assert(idItem >=1 && idItem<object.N)
+	return RemoveNum(object, object.nums[idItem]) #REP_UID
 end
 
 function Remove(object::CRepository,nClass::Int,nNum::Int) #REP_CLASS nClass, REP_ADDRESS nNum
-	@assert(nClass<object.C && nClass>=1)
-	@assert(nNum>=1 && nNum<object.count[nClass])
-	num = nNum + object.offset[nClass] #REP_ADDRESS num=nNum+offset[nClass];
-	return Remove(num)
+	@assert(nClass<=object.C && nClass>=1)
+	@assert(nNum>=1 && nNum<=object.count[nClass])
+	num = nNum + object.offset[nClass]-1 #REP_ADDRESS num=nNum+offset[nClass];
+	return RemoveNum(object, num)
 end
 
-function RemoveAll()
-	while(NumberOfItems())
-		Remove(1) #REP_ADDRESS
+function RemoveAll(object::CRepository)
+	while(NumberOfItems(object)!= 0)
+		RemoveNum(object, 1) #REP_ADDRESS
 	end
 end
 #////////////////// C L A S S  F U N C T I O N S ///////////////////////////////////
@@ -149,11 +156,11 @@ function Class_idItem(object::CRepository, idItem::Int)
 	#assert(idItem>=1);
 	@assert idItem >= 1
 	#assert(idItem<N);
-	@assert idItem < N
+	@assert idItem < object.N
 	#REP_ADDRESS n=nums[idItem];
 	n::Int = object.nums[idItem]
 	#return Class(n);
-	return Class_nNum(n)
+	return Class_nNum(object, n)
 end
 
 #REP_CLASS CRepository<T>::Class(const REP_ADDRESS nNum)
@@ -166,9 +173,9 @@ function Class_nNum(object::CRepository, nNum::Int)
 	#REP_CLASS c=0;
 	c::Int = 1
 	#REP_ADDRESS n=nNum;
-	n = nNum
+	n = nNum #n is 1
 	#while (n>=count[c])
-	while n >= object.count[c]
+	while n > object.count[c] #while 1 >= 10
 		#n-=count[c];
 		n -= object.count[c]
 		#c++;
@@ -180,40 +187,35 @@ end
 
 #void CRepository<T>::ChangeClass(const REP_UID idItem, const REP_CLASS nNewClass)
 function ChangeClassID(object::CRepository, idItem::Int, nNewClass::Int)
-	#assert(idItem>=0 && idItem<N);
-	@assert idItem >= 1 && IdItem < object.N
-	#ChangeClass(nums[idItem],nNewClass);
-	ChangeClass(object.nums[idItem], nNewClass)
+  #assert(idItem>=0 && idItem<N);
+  @assert idItem >= 1 && idItem < object.N
+  #ChangeClass(nums[idItem],nNewClass);
+  ChangeClassNum(object,object.nums[idItem], nNewClass)
 end
 
 #void CRepository<T>::ChangeClass(const REP_ADDRESS nNum,const REP_CLASS nNewClass)
 function ChangeClassNum(object::CRepository, nNum::Int, nNewClass::Int)
-	#assert(nNewClass>=0 && nNewClass<C);
-	@assert nNewClass >= 1 && nNewClass < object.C
-	#assert(nNum>=0 && nNum<=nStored);
-	@assert nNum >= 1 && nNum <= object.nStored
-	#REP_CLASS cls=Class(nNum);
-	cls::Int = Class(nNum)
-	#if (cls<nNewClass) ClassIncrease(nNum,nNewClass);
-	if (cls < nNewClass)
-		ClassIncrease(nNum, nNewClass)
-	else
-		ClassDecrease(nNum,nNewClass);
-	end
+  #assert(nNewClass>=0 && nNewClass<C);
+  @assert nNewClass >= 1 && nNewClass <= object.C
+  #assert(nNum>=0 && nNum<=nStored);
+  @assert nNum >= 1 && nNum <= object.nStored
+  TempObj::CRepository = ItemNum(object, nNum)
+  RemoveNum(object, nNum)
+  Add(object, TempObj, nNewClass)
 end
 
 #void CRepository<T>::ChangeClass(const REP_CLASS nClass,const REP_ADDRESS nNum, const REP_CLASS nNewClass)
 function ChangeClass(object::CRepository, nClass::Int, nNum::Int, nNewClass::Int)
-	#assert(nClass<C && nClass>=0);
-	@assert nClass < object.C && nClass >= 1
-	#assert(nNum>=0 && nNum<count[nClass]);
-	@assert nNum>= 1 && nNum<object.count[nClass]
-	#assert(nNewClass<C && nNewClass>=0);
-	@assert nNewClass<object.C && nNewClass>=1
-	#REP_ADDRESS num=offset[nClass]+nNum;
-	num::Int = object.offset[nClass]+nNum;
-	#ChangeClass(num,nNewClass);
-	ChangeClass(object, object.num, nNewClass)
+  #assert(nClass<C && nClass>=0);
+  @assert nClass < object.C && nClass >= 1
+  #assert(nNum>=0 && nNum<count[nClass]);
+  @assert nNum>= 1 && nNum<object.count[nClass]
+  #assert(nNewClass<C && nNewClass>=0);
+  @assert nNewClass<=object.C && nNewClass>=1
+  #REP_ADDRESS num=offset[nClass]+nNum;
+  num::Int = object.offset[nClass]+nNum;
+  #ChangeClass(num,nNewClass);
+  ChangeClassNum(object, num, nNewClass)
 end
 
 #/////////////////// I T E M  F U N C T I O N S //////////////////////////////////
@@ -231,17 +233,17 @@ function ItemID(object::CRepository,idItem::Int) #REP_UID
 end
 
 function Item(object::CRepository,nClass::Int,nNum::Int) #REP_CLASS nCLASS,REP_ADDRESS nNum
-	@assert(nClass>=1 && nClass<object.C) #// RETRIEVE ITEM /////////////
-	@assert(nNum<object.count[nClass])
+	@assert(nClass>=1 && nClass<=object.C) #// RETRIEVE ITEM /////////////
+	@assert(nNum<=object.count[nClass])
 	@assert(nNum>=1)
-	return object.items[object.ids[nNum+object.offset[nClass]]]
+	return object.items[object.ids[nNum+object.offset[nClass]-1]]
 end
 
 function RandomItem(object::CRepository)
-	return object.Item(rng.IntFromTo(1,NumberOfItems()-1))
+	return object.Item(rng.IntFromTo(1,NumberOfItems(object)-1))
 end
 
-function RandomItem(object::CRepository,nClass::Int) #REP_CLASS nClass
+function RandomItemnClass(object::CRepository,nClass::Int) #REP_CLASS nClass
 	@assert(NumberOfItems(nClass))>1
 	return Item(nClass,rng.IntFromTo(1,NumberOfItems(nClass)-1))
 end
@@ -260,9 +262,9 @@ end
 #void CRepository<T>::DeleteAll() // REMOVE ALL ITEMS AND CALL DELETE FOR EVERY ITEM ////
 function DeleteAll(object::CRepository)
 	#while (NumberOfItems())
-	while NumberOfItems(object)
+	while NumberOfItems(object) != 0
 		#T* x=Remove((REP_ADDRESS)1);
-		x = Remove(object, 1)
+		x = RemoveNum(object, 1)
 	end
 end
 
@@ -281,7 +283,6 @@ function Enlarge(object::CRepository)
 	if newsize <= object.N + 1
 		return false
 	else
-		# printf("Resizing Storage To %d\n",newsize);
 		#T** itembuf=items;
 		#itembuf::Array{Ptr{T}} = object.items
 		#items=new T*[newsize];
@@ -300,7 +301,7 @@ function Enlarge(object::CRepository)
 		#for (REP_ADDRESS i=N;i<newsize;i++) ids[i]=i;
 		#memcpy(ids,idbuf,N*sizeof(REP_UID));
 		b = zeros(newsize)
-		copyto!(b,idbuf)
+		object.ids = copyto!(b,idbuf)
 		#delete idbuf;
 #Populate ids w/newIds and bigger size
 
@@ -328,11 +329,11 @@ end
 #void CRepository<T>::ClassIncrease(const REP_ADDRESS nNum,const REP_CLASS nClass)
 function ClassIncrease(object::CRepository, nNum::Int, nClass::Int)
 	#assert(nNum>=1 && nNum<N);
-	@assert nNum >= 1 && nNum < object.N
+	@assert nNum >= 1 && nNum <= object.N
 	#assert(nClass>=1 && nClass<=C);
-	@assert nClass >= 1 && nClass <= C
+	@assert nClass >= 1 && nClass <= object.C + 1
 	#REP_CLASS cls=Class(nNum);
-	cls::Int = Class(object, nNum)
+	cls::Int = Class_nNum(object, nNum)
 	#REP_ADDRESS mynum=nNum;
 	mynum::Int = nNum
 	#REP_UID myid=ids[mynum];
@@ -340,12 +341,12 @@ function ClassIncrease(object::CRepository, nNum::Int, nClass::Int)
 	#assert(cls<=nClass);
 	@assert cls <= nClass
 	#while (cls<nClass)						// Keep increasing
-	while cls < nClass
+	while cls < nClass + 1
 		#First go to last pos in current group
 		#REP_ADDRESS tarnum=offset[cls]+count[cls]-1;
 		tarnum::Int = object.offset[cls] + object.count[cls] - 1
 		#if (mynum!=tarnum)
-		if nynum != tarnum
+		if mynum != tarnum
 			#REP_UID idbuf=ids[tarnum];
 			idbuf::Int = object.ids[tarnum]
 			#ids[tarnum]=ids[mynum];
@@ -372,11 +373,15 @@ end
 
 
 function ClassDecrease(object::CRepository,nNum::Int,nClass::Int) #REP_ADDRESS nNum,REP_CLASS nClass
-	@assert(nNum>=1 && nNum<object.N)
+	#nNum is selector for what Num?
+	#nClass is the selector for some Class
+		#ClassDecrease(object, curnum, nClass) #curnum and nClass =1
+	@assert(nNum>=1 && nNum<=object.N)
 	@assert(nClass>=1 && nClass <=object.C)
-	cls::Int = Class_nNum(object, nNum) #REP_CLASS
-	mynum::Int = nNum #REP_ADDRESS
+	cls::Int = Class_nNum(object, nNum) #REP_CLASS cls = c cls =1
+	mynum::Int = nNum #REP_ADDRESS nNum =1
 	myid::Int =object.ids[mynum] #REP_UID
+
 	@assert(cls>=nClass)
 	while(cls>nClass) #//Keep decreasing
 		tarnum::Int = object.offset[cls] #// First go to first pos in current group #REP_UID
