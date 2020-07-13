@@ -9,17 +9,17 @@ using Distributed
 time = 0
 #Create N agents and set their internal state to S AKA class 0
 #make Master Repository
-MasterRepository = repo.ConstructorNClasses(C=2, N = 10)
+MasterRepository = repo.ConstructorNClasses(C=2, N = 1000)
 repo.Allocate(MasterRepository)
 #Create a repository for N agents also initializing them in state S.
-for i = 1:10
+for i = 1:1000
 	#add each new object to Repo
 	repo.Add(MasterRepository, repo.ConstructorNClasses(C=i), 1)
 end
 
 function Initialize()
 	#FOR i=1 TO 10 (or whatever)  DO Infect() END
-	for i = 1:10
+	for i = 1:1000
 		Infect()
 	end
 end
@@ -42,7 +42,7 @@ end
 
 function Model()
 	Initialize()
-	for i=1:10 #TO END DO
+	for i=1:1000 #TO END DO
 		#Get n_i from repository
 		nInfected = repo.NumberOfItemsClass(MasterRepository, 2)
 			#so get the rate of recovery from the repository
@@ -50,10 +50,10 @@ function Model()
 		nSuspectible = repo.NumberOfItemsClass(MasterRepository, 1)
 			#rate of susceptibles
    		#Calulate rInf = p*nI*nS
-		rateInfected = 10*nInfected*nSuspectible
+		rateInfected = 1*nInfected*nSuspectible
 			#this is the total rate at which infection events
    		#Calculate rRec = r*nI
-		rateRecovered = .5*nInfected #I set r = .5
+		rateRecovered = 100*nInfected #I set r = .5
 			#The total rate at which agents recover is then r*nI
 			#r is the rate of recovery
 			#nl is rate of recovery from the repository
@@ -64,7 +64,6 @@ function Model()
 		q = rateRecovered/(rateInfected+rateRecovered)
    		#Generate a random number u  between 0 and 1
 		u = rand(Float32, 1)
-		println(u[1])
    		#If u<q Recover() ELSE Infect()
 		if u[1] < q
 			Recover()
@@ -75,6 +74,7 @@ function Model()
    		#Let t=t+exp(-rTot)
 		global time += exp(-TotalRate)
 	end
+	println("number infected: ", repo.NumberOfItemsClass(MasterRepository, 2))
 end
 
 Model()
