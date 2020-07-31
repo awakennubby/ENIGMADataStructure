@@ -1,11 +1,14 @@
-##include("C:/Users/slephc/Desktop/Julia 1.4.2/SimpleSpreadingSim2.jl")
 
 using Distributed
 using Plots
 
-@everywhere include("C:/Users/slephc/Desktop/Julia 1.4.2/repo.jl")
-@everywhere include("C:/Users/slephc/Desktop/Julia 1.4.2/SimpleSpeciesClass.jl")
+filename1 = "repo.jl"
+filepath1 = joinpath(@__DIR__,filename1)
+@everywhere include(filepath1)
 
+filename2 = "SimpleSpeciesClass.jl"
+filepath2 = joinpath(@__DIR__,filename2)
+@everywhere include(filepath2)
 
 function InitializeRG(n::Int, k::Int, net::SiteNetwork.Network)
     net.N = n #number of nodes

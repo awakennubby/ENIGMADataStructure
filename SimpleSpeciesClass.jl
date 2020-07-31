@@ -1,4 +1,3 @@
-#include("C:/Users/slephc/Desktop/Julia 1.4.2/simpleSpecies.jl")
 
 module SiteNetwork
 
@@ -6,7 +5,10 @@ using Distributed
 
 using Random
 
-@everywhere include("C:/Users/slephc/Desktop/Julia 1.4.2/repo.jl")
+filename = "repo.jl"
+filepath = joinpath(@__DIR__,filename)
+
+@everywhere include(filepath)
 
 abstract type Node end
 abstract type Link end

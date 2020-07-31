@@ -1,7 +1,10 @@
 using Distributed
 using Plots
 
-@everywhere include("C:/Users/slephc/Desktop/Julia 1.4.2/repo.jl")
+filename = "repo.jl"
+filepath = joinpath(@__DIR__,filename)
+
+@everywhere include(filepath)
 
 
 #Initialize()
