@@ -52,7 +52,7 @@ function Model()
 	y = []
 	time::Float64 = 0
 	#x = 1:10; y=rand(10);
-	for i=1:1000 #TO END DO
+	for i=1:2500 #TO END DO
 		#Get n_i from repository
 		nInfected = repo.NumberOfItemsClass(MasterRepository, 2)
 			#so get the rate of recovery from the repository
