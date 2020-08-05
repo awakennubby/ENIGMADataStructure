@@ -243,5 +243,5 @@ for i = 1:1000
 end
 
 Initialize(1000, 5000, MasterRepository)
-Simulation(1, MasterRepository,net)
+Simulation(3, MasterRepository,net)
 println("Final number infected: ", repo.NumberOfItemsClass(MasterRepository, 2))
