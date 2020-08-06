@@ -1,4 +1,3 @@
-
 module SiteNetwork
 
 using Distributed
@@ -21,10 +20,14 @@ mutable struct NetworkStruct <: Network
 	t::Float64 #Time
 	N::Int #Number of nodes
 	K::Int #number of links
+	#ActiveLinks::Int #any links in state 1+2
+	#SusInfectedOnly::Int # any links in state 2
 	nodeArr::Array{Node}
 	stubArr::Array{Stub}
 	linkArr::Array{Link}
 end
+
+
 mutable struct StubStruct <: Stub
 	#node - the number of the node that it is on
 	node::Union{Int,Node}
@@ -91,13 +94,25 @@ function setNodes(x::Int)
 end
 
 function RandLinkState(state::Int, linkArr::Array)
+	#Size/length of linkArr = 5000
 	LinkIDArr = rand(1:1:length(linkArr)[1], 1)
 	LinkID = LinkIDArr[1]
 	while linkArr[LinkID].state != state
 		LinkIDArr = rand(1:1:size(linkArr,1)[1], 1)
 		LinkID = LinkIDArr[1]
 	end
-	return LinkIDArr[1]
+	return LinkID
 end
 
+function SusInfectedOnly(linkArr::Array)
+	count = 0
+	for i = 1:size(linkArr,1)[1]
+		if linkArr[i].state == 2
+			count += 1
+		end
+	end
+	return count
+end
+
+#this is the end for the end of the module
 end
